@@ -1,9 +1,13 @@
-/// # Chapter 1: Boolean Logic
-/// 
+//! # Chapter 1: Boolean Logic
+//!
+//! This module implements the foundational Boolean logic gates that form the basis
+//! of all digital circuits in the computer architecture we're building.
+
+/// ## Basic Signals
+///
 /// A single bit: the smallest signal in any digital circuit.
 ///
-/// ## Basic Signals
-/// `false` is logic 0, `true` is logic 1. 
+/// `false` is logic 0, `true` is logic 1.
 pub type Bit = bool;
 
 /// ## Basic Gates
@@ -63,7 +67,39 @@ pub fn and(a: Bit, b: Bit) -> Bit {
     not(nand(a, b))
 }
 
+/// ### Or Gate
+/// The Or gate returns 1 if at least one of its inputs is 1, and 0 otherwise.
+/// Boolean function:
+/// | a | b | Or(a,b) |
+/// |---|---|---------|
+/// | 0 | 0 |    0    |
+/// | 0 | 1 |    1    |
+/// | 1 | 0 |    1    |
+/// | 1 | 1 |    1    |
+/// 
+/// We implement the Or gate using Nand gates as follows (by De Morgan's Law):
+/// 
+/// First approach (using Not and Nand):
+/// | a | b | Not(a) | Not(b) | Nand(Not(a), Not(b)) | Or(a,b) |
+/// |---|---|--------|--------|--------------------|---------|
+/// | 0 | 0 |   1    |   1    |         0          |    0    |
+/// | 0 | 1 |   1    |   0    |         1          |    1    |
+/// | 1 | 0 |   0    |   1    |         1          |    1    |
+/// | 1 | 1 |   0    |   0    |         1          |    1    |
+///
+/// More efficient implementation (using only Nand gates):
+/// | a | b | Nand(a,a) | Nand(b,b) | Nand(Nand(a,a), Nand(b,b)) | Or(a,b) |
+/// |---|---|-----------|-----------|-------|---------|
+/// | 0 | 0 |     1     |     1     |   0   |    0    |
+/// | 0 | 1 |     1     |     0     |   1   |    1    |
+/// | 1 | 0 |     0     |     1     |   1   |    1    |
+/// | 1 | 1 |     0     |     0     |   1   |    1    |
+pub fn or(a: Bit, b: Bit) -> Bit {
+    nand(nand(a, a), nand(b, b))
+}
+
 #[cfg(test)]
+#[allow(clippy::bool_assert_comparison)]
 mod tests {
     use super::*;
 
@@ -87,5 +123,13 @@ mod tests {
         assert_eq!(and(false, true), false);
         assert_eq!(and(true, false), false);
         assert_eq!(and(true, true), true);
+    }
+
+    #[test]
+    fn test_or_table() {
+        assert_eq!(or(false, false), false);
+        assert_eq!(or(false, true), true);
+        assert_eq!(or(true, false), true);
+        assert_eq!(or(true, true), true);
     }
 }
