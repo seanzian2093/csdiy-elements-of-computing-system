@@ -212,7 +212,7 @@ pub fn dmux(input: Bit, sel: Bit) -> (Bit, Bit) {
 ///
 /// This mirrors the Nand2tetris convention, where `And16`, `Or16`, `Not16` and
 /// `Mux16` are each a bundle of 16 of the single-bit gates defined above.
-
+///
 /// The number of bits in one word.
 pub const WORD_SIZE: usize = 16;
 
@@ -326,50 +326,75 @@ mod tests {
         assert_eq!(dmux(true, true), (false, true));
     }
 
-    // Build a 16-bit word from a `u16`, bit 0 = bit 0.
-    fn bits_from(value: u16) -> Bits {
-        std::array::from_fn(|i| (value >> i) & 1 == 1)
-    }
-
-    // Convert a 16-bit word back to a `u16` for easy comparison.
-    fn to_u16(bits: Bits) -> u16 {
-        bits.iter().enumerate().fold(0u16, |acc, (i, &b)| acc | (b as u16) << i)
-    }
+    // A few named 16-bit test words, written as plain vectors of bits.
+    //
+    // Bit 0 (the leftmost element) is the least-significant bit.
+    const ZEROS: Bits = [false; 16];
+    const ONES: Bits = [true; 16];
+    // Only the low 8 bits set.
+    const LOW: Bits = [
+        true, true, true, true, true, true, true, true,
+        false, false, false, false, false, false, false, false,
+    ];
+    // Alternating 1/0, and the same pattern shifted by one bit.
+    const ALT: Bits = [
+        true, false, true, false, true, false, true, false,
+        true, false, true, false, true, false, true, false,
+    ];
+    const ALT_X: Bits = [
+        false, true, false, true, false, true, false, true,
+        false, true, false, true, false, true, false, true,
+    ];
 
     #[test]
     fn test_not16_table() {
-        // Inverting every bit is the same as `0xFFFF ^ x`, i.e. one's complement.
-        for value in [0x0000u16, 0x0001, 0x000F, 0x8000, 0x5555, 0xABCD, 0xFFFF] {
-            assert_eq!(to_u16(not16(bits_from(value))), value ^ 0xFFFF);
+        // Not16 inverts every bit, so each word maps to its complement.
+        for (input, expected) in [
+            (ZEROS, ONES),
+            (ONES, ZEROS),
+            (ALT, ALT_X),
+            (ALT_X, ALT),
+        ] {
+            assert_eq!(not16(input), expected);
         }
     }
 
     #[test]
     fn test_and16_table() {
-        for value in [0x0000u16, 0x0001, 0x000F, 0x8000, 0x5555, 0xABCD, 0xFFFF] {
-            for other in [0x0000u16, 0x0001, 0x0F0F, 0x8000, 0x5555, 0xABCD, 0xFFFF] {
-                assert_eq!(to_u16(and16(bits_from(value), bits_from(other))), value & other);
-            }
+        // and16 sets a bit only where both operands have it set.
+        for (a, b, expected) in [
+            (ZEROS, ONES, ZEROS),
+            (ONES, ZEROS, ZEROS),
+            (ONES, ONES, ONES),
+            (LOW, ONES, LOW), // AND with all-1s is the identity
+            (ALT, ALT, ALT),
+            (ALT, ALT_X, ZEROS), // the two patterns never agree
+        ] {
+            assert_eq!(and16(a, b), expected);
         }
     }
 
     #[test]
     fn test_or16_table() {
-        for value in [0x0000u16, 0x0001, 0x000F, 0x8000, 0x5555, 0xABCD, 0xFFFF] {
-            for other in [0x0000u16, 0x0001, 0x0F0F, 0x8000, 0x5555, 0xABCD, 0xFFFF] {
-                assert_eq!(to_u16(or16(bits_from(value), bits_from(other))), value | other);
-            }
+        // or16 sets a bit wherever either operand has it set.
+        for (a, b, expected) in [
+            (ZEROS, ZEROS, ZEROS),
+            (ONES, ZEROS, ONES),
+            (ZEROS, ONES, ONES),
+            (LOW, ZEROS, LOW), // OR with all-0s is the identity
+            (ALT, ALT, ALT),
+            (ALT, ALT_X, ONES), // the two patterns complement each other
+        ] {
+            assert_eq!(or16(a, b), expected);
         }
     }
 
     #[test]
     fn test_mux16_table() {
-        // sel = 0 selects the whole word `a`; sel = 1 selects the whole word `b`.
-        for value in [0x0000u16, 0x0001, 0x000F, 0x8000, 0x5555, 0xABCD, 0xFFFF] {
-            for other in [0x0000u16, 0x0001, 0x0F0F, 0x8000, 0x5555, 0xABCD, 0xFFFF] {
-                assert_eq!(to_u16(mux16(bits_from(value), bits_from(other), false)), value);
-                assert_eq!(to_u16(mux16(bits_from(value), bits_from(other), true)), other);
-            }
+        // sel = 0 passes the whole word `a` through; sel = 1 passes `b`.
+        for (a, b) in [(LOW, ALT), (ALT_X, ONES), (ZEROS, ONES)] {
+            assert_eq!(mux16(a, b, false), a);
+            assert_eq!(mux16(a, b, true), b);
         }
     }
 }
