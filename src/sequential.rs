@@ -8,7 +8,7 @@
 //! elements are built from sequential chips.
 //!
 
-use crate::gate::{Bit, Bits, WORD_SIZE, mux};
+use crate::gate::{Bit, Bits, WORD_SIZE, inc16, mux};
 
 /// ## Clock
 /// The hardware implementation of a master clock is usually based on a oscillator that
@@ -141,6 +141,7 @@ pub type Address3 = [Bit; 3];
 /// A six-bit address, with bit 0 as the least-significant bit.
 pub type Address6 = [Bit; 6];
 
+/// ### RAM8
 /// RAM8 is a memory unit of 8 16-bit registers, also called 8-word memory.
 ///
 pub struct RAM8 {
@@ -186,6 +187,7 @@ impl Default for RAM8 {
     }
 }
 
+/// ### RAM64
 /// RAM64 is built from 8 RAM8 chips. Its address is 6 bits wide, i.e., k=6
 /// The low 3 address bits select a register, called a word, from the 8 registers within a RAM8 chip
 /// and the high 3 bits select a RAM8 chip, called a bank, from those 8 RAM8 chips.
@@ -227,6 +229,52 @@ impl RAM64 {
 }
 
 impl Default for RAM64 {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// ### Counter
+/// The interface of a counter is similarto that of a register, except that it has two additional control
+/// bits labeled **reset** and **inc**. WHen `inc=1`, the counter increments its statein every clock cycle,
+/// emitting the value `out(t)=out(t-1)+1`. If we want to reset the counter to 0, we set `reset=1`. If we
+/// want to initialize it to some ther counting base **d**, we put **d** in the **in** input and set `load=1`.
+pub struct Counter {
+    register: Register16,
+}
+
+impl Counter {
+    pub fn new() -> Self {
+        Self {
+            register: Register16::new([false; WORD_SIZE]),
+        }
+    }
+
+    pub fn output(&self) -> Bits {
+        self.register.output()
+    }
+
+    pub fn read(&self) -> Bits {
+        self.output()
+    }
+
+    pub fn tick(&mut self, input: Bits, load: Bit, inc: Bit, reset: Bit) {
+        let current = self.output();
+        let next = if reset {
+            [false; WORD_SIZE]
+        } else if load {
+            input
+        } else if inc {
+            inc16(current)
+        } else {
+            current
+        };
+
+        self.register.tick(next, true);
+    }
+}
+
+impl Default for Counter {
     fn default() -> Self {
         Self::new()
     }
@@ -359,6 +407,58 @@ mod tests {
         ram.tick(not_loaded, address, false);
 
         assert_eq!(ram.read(address), stored);
+    }
+
+    #[test]
+    fn counter_starts_at_zero_and_holds_when_no_control_is_set() {
+        let mut counter = Counter::new();
+        let zeros = parse_bits("0000_0000_0000_0000").expect("valid test bit string");
+        let input = parse_bits("1010_1010_1010_1010").expect("valid test bit string");
+
+        assert_eq!(counter.output(), zeros);
+        counter.tick(input, false, false, false);
+        assert_eq!(counter.output(), zeros);
+    }
+
+    #[test]
+    fn counter_loads_and_increments() {
+        let mut counter = Counter::new();
+        let input = parse_bits("0000_0000_0000_0101").expect("valid test bit string");
+        let six = parse_bits("0000_0000_0000_0110").expect("valid test bit string");
+
+        counter.tick(input, true, false, false);
+        assert_eq!(counter.output(), input);
+
+        counter.tick([false; WORD_SIZE], false, true, false);
+        assert_eq!(counter.output(), six);
+    }
+
+    #[test]
+    fn counter_reset_has_priority_over_load_and_increment() {
+        let mut counter = Counter::new();
+        let input = parse_bits("0000_0000_0000_0101").expect("valid test bit string");
+
+        counter.tick(input, true, true, true);
+        assert_eq!(counter.output(), [false; WORD_SIZE]);
+    }
+
+    #[test]
+    fn counter_load_has_priority_over_increment() {
+        let mut counter = Counter::new();
+        let input = parse_bits("0000_0000_0000_0101").expect("valid test bit string");
+
+        counter.tick(input, true, true, false);
+        assert_eq!(counter.output(), input);
+    }
+
+    #[test]
+    fn counter_increment_wraps_at_sixteen_bits() {
+        let mut counter = Counter::new();
+        let maximum = parse_bits("1111_1111_1111_1111").expect("valid test bit string");
+
+        counter.tick(maximum, true, false, false);
+        counter.tick([false; WORD_SIZE], false, true, false);
+        assert_eq!(counter.output(), [false; WORD_SIZE]);
     }
 
     #[test]
