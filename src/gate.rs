@@ -1,4 +1,4 @@
-//! # Chapter 1: Boolean Logic
+//! # Chapter 1&2: Boolean Logic and Arithmetic
 //!
 //! This module implements the foundational Boolean logic gates that form the basis
 //! of all digital circuits in the computer architecture we're building.
@@ -491,6 +491,7 @@ pub fn inc16(a: Bits) -> Bits {
 /// | 0  | 0  | 0  | 1  | 1 | 1  | `y - x` |
 /// | 0  | 0  | 0  | 0  | 0 | 0  | `x & y` |
 /// | 0  | 1  | 0  | 1  | 0 | 1  | `x | y` |
+#[allow(clippy::too_many_arguments)]
 pub fn alu(
     x: Bits,
     y: Bits,
