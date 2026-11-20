@@ -347,7 +347,72 @@
 //!
 //! ### Destination Specification
 //!
-//! The value computed by the `comp` part of C-instruction can be stored in several destinations, specified by `dest`:
+//! The value computed by the `comp` part of C-instruction can be stored in several destinations, 
+//! specified by `dest`:
 //! - first bit code whether to store the computed value in A register
 //! - second bit code whether to store the computed value in D register
 //! - third bit codes whether to store the computed value in M, i.e., in `Memory[A]`
+//! 
+//! | d1 | d2 | d3 | Mnemonic|              Destination              |
+//! |:--:|:--:|:--:|:-------:|:-------------------------------------:|
+//! | 0  | 0  | 0  | null    | The value is not stored anywhere      |
+//! | 0  | 0  | 1  | M       | Memory[A]                             |
+//! | 0  | 1  | 0  | D       | D register                            |
+//! | 0  | 1  | 1  | MD      | D register and Memory[A]              |
+//! | 1  | 0  | 0  | A       | A register                            |
+//! | 1  | 0  | 1  | AM      | A register and Memory[A]              |
+//! | 1  | 1  | 0  | AD      | A register and D register             |
+//! | 1  | 1  | 1  | ADM     | A register, D register, and Memory[A] |
+//! 
+//! ### Jump Specification
+//! 
+//! The `jump` field of C-instruction tells the computer what to do next.
+//! - Fetch and execute the next instruction in the program, by default, or
+//! - Fetch and execute an instruction located elsewhere in the program.
+//!   - To do this, we assume A-register has been preivously set to the address to which we jump
+//! - specifically, whether to jump materialize on ALU output, i.e. computed value of `comp` field
+//!   - first j-bit specifies whether to jump, output < 0
+//!   - second j-bit , output = 0
+//!   - third j-bit , output > 0
+//! 
+//! | j1 | j2 | j3 | Mnemonic|         Effect        |
+//! |:--:|:--:|:--:|:-------:|:---------------------:|
+//! | 0  | 0  | 0  |   null  | No jump               |
+//! | 0  | 0  | 1  |    GT   | If out > 0 then jump  |
+//! | 0  | 1  | 0  |    JEQ  | If out = 0 then jump  |
+//! | 0  | 1  | 1  |    JGE  | If out >= 0 then jump |
+//! | 1  | 0  | 0  |    JLT  | If out < 0 then jump  |
+//! | 1  | 0  | 1  |    JNE  | If out != 0 then jump |
+//! | 1  | 1  | 0  |    JLE  | If out <= 0 then jump |
+//! | 1  | 1  | 1  |    JMP  | Jump                  |
+//! 
+//! ## Symbols
+//! Assembly commands can refer to memory locations(address) using either constants or **symbols**.
+//! 
+//! ### Predefined Symbols
+//! 
+//! ### Virtual Registers
+//! The symbol **R0** to **R15** are predefined to refer to RAM address 0 to 15.
+//! 
+//! ### Predefined Pointers
+//! 
+//! The symbols **SP**, **LCL**, **ARG**, **THIS**, and **THAT** are predefined to refer to RAM 
+//! address 0 to 4, which have two labels, e.g., **R2** and **ARG** both refer to address 2.
+//! 
+//! ### I/O Pointers
+//! 
+//! The symbol **SCREEN** and **KBD** are predefined to refer to RAM address 16384(0x4000) and 
+//! 24576(0x6000), which are base address of the screen and keyboard memory maps.
+//! 
+//! ### Label Symbols
+//! 
+//! These user-defined symbols serve to label destinations of `goto` commands. They are declared by
+//! pseudo-command `(Xxx)`.
+//! 
+//! ### Variable Symbols
+//! 
+//! Any user-defined symbol `Xxx`(if not predifined or defined elsewhere) is called variable, and assigned
+//! a unique memory address by assembler, starintg at RAM address 16(0x0010).
+//! 
+//! 
+//! ## Input/Output Handling
