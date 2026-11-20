@@ -1,4 +1,5 @@
-//! Chapter 3: Sequential Logic
+//! # Chapter 3 - Sequential Logic
+//!
 //! All Boolean and arithmetic chips that we built in chapter 1 and 2 were combinational.
 //! Combinational chips compute functions that depend only on combinations of their inputs.
 //! They cannot maintain state.
@@ -130,11 +131,11 @@ impl Register16 {
 /// A direct-access memory (RAM) is an array of n w-bit registers of which n is size and w is width.
 /// For this implementation, we will build a hierarchy of such memory devices, all 16-bit wide, with sizes
 /// of 8, 64, 512, 4k, and 16k. All have precisely same API which can be generated as:
-/// RAM8, inputs: in[16], address[3], load
-/// RAM64, inputs: in[16], address[6], load
-/// RAM512, inputs: in[16], address[9], load
-/// RAM4k, inputs: in[16], address[12], load
-/// RAM16k, inputs: in[16], address[14], load
+/// RAM8, inputs: `in[16]`, `address[3]`, `load`
+/// RAM64, inputs: `in[16]`, `address[6]`, `load`
+/// RAM512, inputs: `in[16]`, `address[9]`, `load`
+/// RAM4k, inputs: `in[16]`, `address[12]`, `load`
+/// RAM16k, inputs: `in[16]`, `address[14]`, `load`
 ///
 /// A three-bit address, with bit 0 as the least-significant bit.
 pub type Address3 = [Bit; 3];

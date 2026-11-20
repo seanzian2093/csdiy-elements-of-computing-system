@@ -1,4 +1,4 @@
-//! # Chapter 1: Boolean Logic
+//! # Chapter 1 - Boolean Logic
 //!
 //! This module implements the foundational Boolean logic gates that form the basis
 //! of all digital circuits in the computer architecture we're building.
