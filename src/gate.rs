@@ -3,9 +3,13 @@
 //! This module implements the foundational Boolean logic gates that form the basis
 //! of all digital circuits in the computer architecture we're building.
 
-/// ## Basic Signals
-///
-/// A single bit: the smallest signal in any digital circuit.
+//! ## Basic Signals
+//!
+//! A single bit: the smallest signal in any digital circuit. Other implementation
+//! please refer to [`gate_word.rs`]
+//! please refer to [gate_word.rs](./gate_word.rs)
+//! please refer to [gate_word.rs](../gate_word.rs)
+//! See [`crate::gate_word`] for word-level implementations.
 ///
 /// `false` is logic 0, `true` is logic 1.
 pub type Bit = bool;
