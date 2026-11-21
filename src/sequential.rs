@@ -235,6 +235,79 @@ impl Default for RAM64 {
     }
 }
 
+/// A 15-bit address selects one of 32,768 words in instruction memory.
+pub type Address15 = [Bit; 15];
+
+/// ### ROM32k
+/// ROM32k is a read-only memory of 32,768(2^15) 16-bit words. Given Hack is 16-bit, addressable space is
+/// used half by it.
+///
+/// The contents are supplied by `from_words`. Loading support is included so programs
+/// can also be written incrementally, while normal reads remain direct and clock-free.
+pub struct ROM32k {
+    words: [Bits; 32768],
+}
+
+impl ROM32k {
+    pub fn new() -> Self {
+        Self {
+            words: [([false; WORD_SIZE]); 32768],
+        }
+    }
+
+    // Instantiate an instance with provided values i.e., words,
+    pub fn from_words(words: &[Bits]) -> Self {
+        assert!(
+            words.len() <= 32768,
+            "ROM32k can contain at most 32768 words"
+        );
+
+        let mut rom = Self::new();
+        for (index, word) in words.iter().enumerate() {
+            rom.words[index] = *word;
+        }
+        rom
+    }
+
+    pub fn output(&self, address: Address15) -> Bits {
+        self.words[Self::address_index(address)]
+    }
+
+    pub fn read(&self, address: Address15) -> Bits {
+        self.output(address)
+    }
+
+    pub fn tick(&mut self, input: Bits, address: Address15, load: Bit) {
+        if load {
+            self.words[Self::address_index(address)] = input;
+        }
+    }
+
+    pub fn load(&mut self, input: Bits, address: Address15) {
+        self.words[Self::address_index(address)] = input;
+    }
+
+    // Convert binary address to decimal index
+    pub fn address_index(address: Address15) -> usize {
+        let mut index = 0;
+        let mut place = 1;
+        for bit in address.iter() {
+            index += usize::from(*bit) * place;
+            place *= 2;
+        }
+        index
+    }
+}
+
+impl Default for ROM32k {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+pub type Rom32k = ROM32k;
+pub type ROM32K = ROM32k;
+
 /// ### Counter
 /// The interface of a counter is similarto that of a register, except that it has two additional control
 /// bits labeled **reset** and **inc**. WHen `inc=1`, the counter increments its statein every clock cycle,
@@ -408,6 +481,28 @@ mod tests {
         ram.tick(not_loaded, address, false);
 
         assert_eq!(ram.read(address), stored);
+    }
+
+    #[test]
+    fn rom32k_starts_with_zero_in_every_address() {
+        let rom = ROM32k::new();
+
+        assert_eq!(rom.read(test_address(0)), [false; WORD_SIZE]);
+        assert_eq!(rom.read(test_address(32767)), [false; WORD_SIZE]);
+    }
+
+    #[test]
+    fn rom32k_loads_and_reads_selected_addresses() {
+        let first = parse_bits("1010_1010_1010_1010").expect("valid test bit string");
+        let second = parse_bits("0101_0101_0101_0101").expect("valid test bit string");
+        let mut rom = ROM32k::from_words(&[first, second]);
+
+        assert_eq!(rom.read(test_address(0)), first);
+        assert_eq!(rom.read(test_address(1)), second);
+        assert_eq!(rom.read(test_address(2)), [false; WORD_SIZE]);
+
+        rom.load(first, test_address(32767));
+        assert_eq!(rom.read(test_address(32767)), first);
     }
 
     #[test]

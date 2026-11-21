@@ -4,7 +4,7 @@
 //! the von Neumann machine is a practical architecture and the conceptual blueprint of almost
 //! all computer platform today. It is based on a **central processing unit** (CPU), interacting with
 //! a **memory device**, receiving data from some **input** device, and sending data to some **output**
-//! device. Ath the heart of this architecture lies the stored program concept: The computer's memory
+//! device. At the heart of this architecture lies the stored program concept: The computer's memory
 //! stores not only the data that the computer manipulates, but also the very instructions that tell
 //! the computer what to do.
 //!
@@ -60,23 +60,20 @@
 //! ### CPU
 //! Hack's CPU consists of following components:
 //! - ALU
-//! - **data register**(D), 32k 16-bit register
-//! - **address register**(A), 32k 16-bit register
+//! - **data register**(D), 16-bit register
+//! - **address register**(A), 16-bit register
 //! - **progrma counter**(PC), 16-bit counter
 //!   - PC is connected to the address input of the ROM. So ROM chip output always is `ROM[PC]`, i.e., the content of instruction
-//! memory location whose address is pointed at by PC. This content is called **current instruction**.
+//!     memory location whose address is pointed at by PC. This content is called **current instruction**.
 //!
 //! ### Machine Language
 //!
-//! - **address instruction** has format **0vvv_vvvv_vvvv_vvvv** (does not include **_**, here is just for readability), v being
-//! 0 or 1. It causes computer to load the 15-bit constant into the A-register.
-//! - **compute instruction** has format **111_a_ccccccc_ddd_jjj**.
-//!   - The **a-** and **c-** bits instruct the ALU which function to compute.
-//!   - The **d-** bits instruct where to store the ALU output.
-//!   - The **j-** bits specify an optional jump condition.
+//! See details in previous chapter.
 
 use crate::gate::{Bit, Bits, WORD_SIZE, alu};
 use crate::sequential::{Counter, Register16};
+
+pub use crate::sequential::{Address15, ROM32K, ROM32k, Rom32k};
 
 /// The output pins produced by the CPU after a clock tick.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -144,45 +141,32 @@ impl CPU {
         // compute instruction, in binary number format, starts with 1, i.e. Bits[15]
         let is_compute_instruction = instruction[15];
 
+        // Read the first d-bit of c-insturction to determine if store to A-register
         let load_a = if is_compute_instruction {
             // compute instruction has format "111acccccccdddjjj"
-            // instruction[5] — destination A
-            // instruction[4] — destination D
-            // instruction[3] — destination M, M = Memory[A]
+            // instruction[5] — destination is A-register
+            // instruction[4] — destination is D-register
+            // instruction[3] — destination is M, where M = Memory[A]
             instruction[5]
         } else {
             // For an address instruction, is_compute_instruction is false, so load_a is always true
             true
         };
 
-        let a_input = if is_compute_instruction {
-            let (out, _, _) = alu(
-                self.d_register.read(),
-                if instruction[12] {
-                    in_m
-                } else {
-                    self.a_register.read()
-                },
-                instruction[11],
-                instruction[10],
-                instruction[9],
-                instruction[8],
-                instruction[7],
-                instruction[6],
-            );
-            out
-        } else {
-            instruction
-        };
-
+        // if instruction is a c-instruction, causes ALU to calculate and get the computed value
         let (out_m, zr, ng) = if is_compute_instruction {
             alu(
+                // ALU's first input is alway D-register
                 self.d_register.read(),
+                // C-instruction has format of `111_acccccc_ddd_jjj`(ignore the _)
+                // if the `a` bit is 1, second input is M, i.e., Memory[A]
                 if instruction[12] {
                     in_m
                 } else {
+                    // if the `a` bit is 0, second input is A-register
                     self.a_register.read()
                 },
+                // the c-bts are other inputs to ALU
                 instruction[11],
                 instruction[10],
                 instruction[9],
@@ -194,23 +178,37 @@ impl CPU {
             (self.a_register.read(), false, false)
         };
 
+        // if C-instruction, the computed value is to be stored
+        let a_input = if is_compute_instruction {
+            out_m
+        } else {
+            // If instruction is an address instruction, the value to be store in A-register is in the instruction itself.
+            instruction
+        };
+
+        // If the insturction is A-instruction, i.e., setting A-register to `0vvv_vvvv_vvvv_vvvv`, exactly the instruction itself
+        // If the instruction is c-instruction, only store computed value to A-register when `load_a` is 1
         self.a_register.tick(a_input, load_a);
 
-        let write_d = is_compute_instruction && instruction[4];
-        self.d_register.tick(out_m, write_d);
+        // Determine if it is c-instruction and destination is D-register
+        let load_d = is_compute_instruction && instruction[4];
+        self.d_register.tick(out_m, load_d);
 
-        let write_m = is_compute_instruction && instruction[3];
+        // Determine if it is c-instruction and destnation is M, i.e., Memory[A]
+        let load_m = is_compute_instruction && instruction[3];
 
+        // Determine the `jump` field
         let jump = is_compute_instruction
             && ((instruction[2] && ng) || (instruction[1] && zr) || (instruction[0] && !ng && !zr));
 
         let pc_input = self.a_register.read();
+        // Only when `jump` bit(s) is set to 1 and `reset` is 0, load A-register content to PC.
         self.pc
             .tick(pc_input, jump && !reset, !jump && !reset, reset);
 
         CpuOutput {
             out_m,
-            write_m,
+            write_m: load_m,
             address_m: self.a_register.read(),
             pc: self.pc.read(),
         }
