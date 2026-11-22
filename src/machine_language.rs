@@ -353,16 +353,16 @@
 //! - second bit code whether to store the computed value in D register
 //! - third bit codes whether to store the computed value in M, i.e., in `Memory[A]`
 //!
-//! | d1 | d2 | d3 | Mnemonic|              Destination              |
-//! |:--:|:--:|:--:|:-------:|:-------------------------------------:|
-//! | 0  | 0  | 0  | null    | The value is not stored anywhere      |
-//! | 0  | 0  | 1  | M       | Memory[A]                             |
-//! | 0  | 1  | 0  | D       | D register                            |
-//! | 0  | 1  | 1  | MD      | D register and Memory[A]              |
-//! | 1  | 0  | 0  | A       | A register                            |
-//! | 1  | 0  | 1  | AM      | A register and Memory[A]              |
-//! | 1  | 1  | 0  | AD      | A register and D register             |
-//! | 1  | 1  | 1  | ADM     | A register, D register, and Memory[A] |
+//! | d1 | d2 | d3 | Mnemonic|              Destination                |
+//! |:--:|:--:|:--:|:-------:|:---------------------------------------:|
+//! | 0  | 0  | 0  | null    | The value is not stored anywhere        |
+//! | 0  | 0  | 1  | M       | Memory\[A\]                             |
+//! | 0  | 1  | 0  | D       | D register                              |
+//! | 0  | 1  | 1  | MD      | D register and Memory\[A\]              |
+//! | 1  | 0  | 0  | A       | A register                              |
+//! | 1  | 0  | 1  | AM      | A register and Memory\[A\]              |
+//! | 1  | 1  | 0  | AD      | A register and D register               |
+//! | 1  | 1  | 1  | ADM     | A register, D register, and Memory\[A\] |
 //!
 //! ### Jump Specification
 //!
@@ -425,7 +425,7 @@
 //!
 //! ### Keyboard
 //! A single-word memory map located at RAM address 24576(0x6000). Whenever a key is pressed on the physical
-//! keyboard, its 16-bit ASCII code appears in the RAM[24576]. When no key is pressed, the code 0 is there. The
+//! keyboard, its 16-bit ASCII code appears in the RAM\[24576\]. When no key is pressed, the code 0 is there. The
 //! keyboard recognizes additional keys as below
 //! | Key Pressed | Code |
 //! |:-----------:|:----:|

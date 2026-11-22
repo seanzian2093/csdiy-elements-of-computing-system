@@ -141,6 +141,12 @@ impl Register16 {
 pub type Address3 = [Bit; 3];
 /// A six-bit address, with bit 0 as the least-significant bit.
 pub type Address6 = [Bit; 6];
+/// A nine-bit address, with bit 0 as the least-significant bit.
+pub type Address9 = [Bit; 9];
+/// A twelve-bit address, with bit 0 as the least-significant bit.
+pub type Address12 = [Bit; 12];
+/// A fourteen-bit address, with bit 0 as the least-significant bit.
+pub type Address14 = [Bit; 14];
 
 /// ### RAM8
 /// RAM8 is a memory unit of 8 16-bit registers, also called 8-word memory.
@@ -235,6 +241,163 @@ impl Default for RAM64 {
     }
 }
 
+/// ### RAM512
+/// RAM512 is built from 8 RAM64 chips.
+pub struct RAM512 {
+    banks: [RAM64; 8],
+}
+
+impl RAM512 {
+    pub fn new() -> Self {
+        Self {
+            banks: std::array::from_fn(|_| RAM64::new()),
+        }
+    }
+
+    pub fn output(&self, address: Address9) -> Bits {
+        let (word_address, bank_address) = Self::split_address(address);
+        self.banks[RAM8::address_index(bank_address)].output(word_address)
+    }
+
+    pub fn read(&self, address: Address9) -> Bits {
+        self.output(address)
+    }
+
+    pub fn tick(&mut self, input: Bits, address: Address9, load: Bit) {
+        let (word_address, bank_address) = Self::split_address(address);
+        let selected_bank = RAM8::address_index(bank_address);
+
+        for (index, bank) in self.banks.iter_mut().enumerate() {
+            bank.tick(input, word_address, load && index == selected_bank);
+        }
+    }
+
+    fn split_address(address: Address9) -> (Address6, Address3) {
+        (
+            [
+                address[0], address[1], address[2], address[3], address[4], address[5],
+            ],
+            [address[6], address[7], address[8]],
+        )
+    }
+}
+
+impl Default for RAM512 {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// ### RAM4k
+/// RAM4k is built from 8 RAM512 chips.
+pub struct RAM4k {
+    banks: [RAM512; 8],
+}
+
+impl RAM4k {
+    pub fn new() -> Self {
+        Self {
+            banks: std::array::from_fn(|_| RAM512::new()),
+        }
+    }
+
+    pub fn output(&self, address: Address12) -> Bits {
+        let (word_address, bank_address) = Self::split_address(address);
+        self.banks[RAM8::address_index(bank_address)].output(word_address)
+    }
+
+    pub fn read(&self, address: Address12) -> Bits {
+        self.output(address)
+    }
+
+    pub fn tick(&mut self, input: Bits, address: Address12, load: Bit) {
+        let (word_address, bank_address) = Self::split_address(address);
+        let selected_bank = RAM8::address_index(bank_address);
+
+        for (index, bank) in self.banks.iter_mut().enumerate() {
+            bank.tick(input, word_address, load && index == selected_bank);
+        }
+    }
+
+    fn split_address(address: Address12) -> (Address9, Address3) {
+        (
+            [
+                address[0], address[1], address[2], address[3], address[4], address[5], address[6],
+                address[7], address[8],
+            ],
+            [address[9], address[10], address[11]],
+        )
+    }
+}
+
+impl Default for RAM4k {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// ### RAM16k
+/// RAM16k is built from 4 RAM4k chips.
+pub struct RAM16k {
+    banks: Vec<RAM4k>,
+}
+
+impl RAM16k {
+    pub fn new() -> Self {
+        let mut banks = Vec::with_capacity(4);
+        for _ in 0..4 {
+            banks.push(RAM4k::new());
+        }
+
+        Self { banks }
+    }
+
+    pub fn output(&self, address: Address14) -> Bits {
+        let (word_address, bank_address) = Self::split_address(address);
+        self.banks[usize::from(bank_address[0]) + 2 * usize::from(bank_address[1])]
+            .output(word_address)
+    }
+
+    pub fn read(&self, address: Address14) -> Bits {
+        self.output(address)
+    }
+
+    pub fn tick(&mut self, input: Bits, address: Address14, load: Bit) {
+        let (word_address, bank_address) = Self::split_address(address);
+        let selected_bank = usize::from(bank_address[0]) + 2 * usize::from(bank_address[1]);
+
+        for (index, bank) in self.banks.iter_mut().enumerate() {
+            bank.tick(input, word_address, load && index == selected_bank);
+        }
+    }
+
+    fn split_address(address: Address14) -> (Address12, [Bit; 2]) {
+        (
+            [
+                address[0],
+                address[1],
+                address[2],
+                address[3],
+                address[4],
+                address[5],
+                address[6],
+                address[7],
+                address[8],
+                address[9],
+                address[10],
+                address[11],
+            ],
+            [address[12], address[13]],
+        )
+    }
+}
+
+impl Default for RAM16k {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// A 15-bit address selects one of 32,768 words in instruction memory.
 pub type Address15 = [Bit; 15];
 
@@ -245,13 +408,13 @@ pub type Address15 = [Bit; 15];
 /// The contents are supplied by `from_words`. Loading support is included so programs
 /// can also be written incrementally, while normal reads remain direct and clock-free.
 pub struct ROM32k {
-    words: [Bits; 32768],
+    words: Vec<Bits>,
 }
 
 impl ROM32k {
     pub fn new() -> Self {
         Self {
-            words: [([false; WORD_SIZE]); 32768],
+            words: vec![[false; WORD_SIZE]; 32768],
         }
     }
 
