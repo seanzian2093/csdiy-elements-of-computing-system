@@ -742,6 +742,14 @@ mod tests {
         for _ in 0..program.len() {
             computer.tick(false);
         }
+        println!(
+            "RAM[10]: {:?}",
+            computer.memory().read(test_memory_address(10))
+        );
+
+        println!("A: {:?}", computer.cpu().read_a());
+        println!("D: {:?}", computer.cpu().read_d());
+        println!("PC: {:?}", computer.cpu().read_pc());
 
         assert_eq!(
             computer.memory().read(test_memory_address(10)),
