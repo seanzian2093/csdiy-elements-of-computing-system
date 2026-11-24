@@ -74,8 +74,8 @@
 //!
 //! ### Memory Address Space
 //!
-//! - **instruction memory**, 16-bit register, 15-bit address space thus 32k size, i.e., 32k 16-bit words
-//! - **data memory**, 16-bit register, 15-bit address space thus 32k size, i.e., 32k 16-bit words
+//! - **instruction memory**, 32k of 16-bit register, i.e., 32k 16-bit words
+//! - **data memory**, 32k of 16-bit register,i.e., 32k 16-bit words
 //!
 //! ### Registers
 //! - **data register**(D), 16-bit register, used to store data values

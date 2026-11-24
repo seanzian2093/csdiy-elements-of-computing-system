@@ -3,3 +3,4 @@ pub mod computer;
 pub mod gate;
 pub mod machine_language;
 pub mod sequential;
+pub mod virtual_machine;
