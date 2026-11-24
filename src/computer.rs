@@ -211,12 +211,16 @@ impl ScreenWindow {
         })
     }
 
+    // Copies the virtual Hack screen into the window’s pixel buffer, then displays it
     pub fn update(&mut self, screen: &Screen) -> Result<(), minifb::Error> {
         for y in 0..SCREEN_HEIGHT {
             for x in 0..SCREEN_WIDTH {
                 self.pixels[y * SCREEN_WIDTH + x] = if screen.get_pixel(x, y) {
+                    // if Hack screen's pixel is 1, set window's pixel to black
+                    // 0x000000 is hexadecimal RGB color notation of black
                     0x000000
                 } else {
+                    // else white
                     0x00ff_ffff
                 };
             }
