@@ -113,6 +113,7 @@
 
 use crate::gate::{Bit, Bits, WORD_SIZE, alu};
 use crate::sequential::{Address14, Counter, RAM16k, Register16};
+use minifb::{Window, WindowOptions};
 
 pub use crate::sequential::{Address15, ROM32K, ROM32k, Rom32k};
 
@@ -186,6 +187,47 @@ impl Screen {
 impl Default for Screen {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Displays the Hack screen in a host window.
+pub struct ScreenWindow {
+    window: Window,
+    pixels: Vec<u32>,
+}
+
+impl ScreenWindow {
+    pub fn new() -> Result<Self, minifb::Error> {
+        let window = Window::new(
+            "Hack Screen",
+            SCREEN_WIDTH,
+            SCREEN_HEIGHT,
+            WindowOptions::default(),
+        )?;
+
+        Ok(Self {
+            window,
+            pixels: vec![0; SCREEN_WIDTH * SCREEN_HEIGHT],
+        })
+    }
+
+    pub fn update(&mut self, screen: &Screen) -> Result<(), minifb::Error> {
+        for y in 0..SCREEN_HEIGHT {
+            for x in 0..SCREEN_WIDTH {
+                self.pixels[y * SCREEN_WIDTH + x] = if screen.get_pixel(x, y) {
+                    0x000000
+                } else {
+                    0x00ff_ffff
+                };
+            }
+        }
+
+        self.window
+            .update_with_buffer(&self.pixels, SCREEN_WIDTH, SCREEN_HEIGHT)
+    }
+
+    pub fn is_open(&self) -> bool {
+        self.window.is_open()
     }
 }
 
